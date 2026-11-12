@@ -1,0 +1,6 @@
+pnpm-lock.yaml
+dist/
+coverage/
+packages/api/src/gen/
+# Markdown left as written (CLAUDE.md @-imports use "\ " escapes)
+*.md

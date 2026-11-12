@@ -1,0 +1,10 @@
+packages:
+  - apps/*
+  - packages/*
+minimumReleaseAgeExclude:
+  - '@vitejs/plugin-vue@6.0.11'
+  - prettier@3.10.1
+peerDependencyRules:
+  allowedVersions:
+    # openapi-typescript declares typescript ^5 but works with 6; revisit when it supports 6/7.
+    openapi-typescript>typescript: '6'

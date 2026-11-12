@@ -1,0 +1,102 @@
+name: web
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: web-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      apps: ${{ steps.filter.outputs.changes }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dorny/paths-filter@v4
+        id: filter
+        with:
+          # Shared code and the lockfile trigger both apps (lists kept identical).
+          filters: |
+            portal:
+              - 'apps/portal/**'
+              - 'packages/**'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'package.json'
+              - 'tsconfig.base.json'
+              - 'eslint.config.ts'
+              - '.nvmrc'
+              - '.contracts-version'
+              - '.github/workflows/web.yml'
+            backoffice:
+              - 'apps/backoffice/**'
+              - 'packages/**'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'package.json'
+              - 'tsconfig.base.json'
+              - 'eslint.config.ts'
+              - '.nvmrc'
+              - '.contracts-version'
+              - '.github/workflows/web.yml'
+
+  check:
+    needs: changes
+    if: needs.changes.outputs.apps != '[]' && needs.changes.outputs.apps != ''
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: ${{ fromJSON(needs.changes.outputs.apps) }}
+    name: ${{ matrix.app }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Generated code (packages/api/src/gen) is committed; CI has no ../hub, so codegen doesn't run here.
+      - name: Lint
+        run: pnpm exec eslint apps/${{ matrix.app }} packages && pnpm exec prettier --check apps/${{ matrix.app }} packages
+      - name: Typecheck
+        run: pnpm --filter "@booksbee/${{ matrix.app }}..." typecheck
+      - name: Test
+        run: pnpm exec vitest run --project ${{ matrix.app }} --project api --project auth --project ui
+      - name: Build
+        run: pnpm --filter "@booksbee/${{ matrix.app }}" build
+      - uses: actions/upload-artifact@v7
+        if: github.ref == 'refs/heads/main'
+        with:
+          name: ${{ matrix.app }}-dist
+          path: apps/${{ matrix.app }}/dist
+          retention-days: 7
+
+  # deploy:
+  #   # Separate GitHub Environments with required reviewers:
+  #   #   portal-production (public) · backoffice-production (restricted exposure: VPN/IP allowlist or
+  #   #   identity-aware proxy in front; never linked from the portal).
+  #   needs: [changes, check]
+  #   if: github.ref == 'refs/heads/main'
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     matrix:
+  #       app: ${{ fromJSON(needs.changes.outputs.apps) }}
+  #   environment: ${{ matrix.app }}-production
+  #   steps:
+  #     - uses: actions/download-artifact@v8
+  #       with:
+  #         name: ${{ matrix.app }}-dist
+  #         path: dist
+  #     - run: echo "TODO: deploy dist/ for ${{ matrix.app }} (hosting not decided)"

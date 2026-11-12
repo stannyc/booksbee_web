@@ -1,0 +1,39 @@
+/*
+ * BooksBee design tokens + Tailwind v4 entry. Apps import this once:
+ *   @import '@booksbee/ui/styles.css';
+ * Tokens become Tailwind utilities (bg-honey-500, text-ink-700, rounded-card, …).
+ * Keep in sync with src/tokens.ts.
+ */
+@import 'tailwindcss';
+
+/* Scan shared components for class names. */
+@source './';
+
+@theme {
+  --font-sans: 'Nunito', ui-sans-serif, system-ui, sans-serif;
+
+  --color-honey-50: #fff8e6;
+  --color-honey-100: #ffefc2;
+  --color-honey-300: #ffd466;
+  --color-honey-500: #f5a800;
+  --color-honey-600: #d68f00;
+  --color-honey-700: #a86f00;
+
+  --color-ink-50: #f6f7f9;
+  --color-ink-100: #eceef2;
+  --color-ink-300: #c3c8d2;
+  --color-ink-500: #6b7385;
+  --color-ink-700: #343a48;
+  --color-ink-900: #151922;
+
+  --color-success-500: #2e9e5b;
+  --color-danger-500: #d64545;
+
+  --radius-card: 1rem;
+}
+
+@layer base {
+  html {
+    @apply bg-ink-50 font-sans text-ink-900 antialiased;
+  }
+}
